@@ -1,7 +1,7 @@
 version: 0.0.1
 
 services:
-  mongoDB:
+  mongodb:
     image: mongo:latest
     ports:
       - "27017:27017"
@@ -10,7 +10,7 @@ services:
         - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/db_password
         - MONGO_INITDB_DATABASE=restfuldart
     volumes:
-      - monongodb:/data/db
+      - monongo-db:/data/db
     networks:
       - mongo-net
     secrets:
@@ -23,12 +23,12 @@ services:
       - PORT=8080
       - API_QUERIES_LIMIT=100
       - API_QUERIES_PAGE=1
-      - MONGO_DART_DRIVER_HOST=mongoDB
+      - MONGO_DART_DRIVER_HOST=mongodb
       - MONGO_DART_DRIVER_PORT=27017
     ports:
       - "8080:8080"
     depends_on:
-      - mongoDB
+      - mongodb
     networks:
       - mongo-net
 
@@ -43,4 +43,4 @@ secrets:
     file: ./secrets/db_password.txt
 
 volumes:
-    monongodb:
+    monongo-db:

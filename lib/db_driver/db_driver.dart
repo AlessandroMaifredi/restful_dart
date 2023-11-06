@@ -5,7 +5,7 @@ import 'package:mongo_dart/mongo_dart.dart';
 /// A singleton class to manage the database connection
 class DbDriver {
   /// The database connection
-  final Db _mongoDb = Db('mongodb://$_host:$_port/mongo_dart-blog');
+  final Db _mongoDb = Db('mongodb://$_host:$_port/restfuldart');
 
   /// The host for the database connection
   /// Use the environment variable MONGO_DART_DRIVER_HOST to override
