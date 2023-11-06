@@ -7,6 +7,6 @@ class RestfulException implements Exception {
 
   @override
   String toString() {
-    return 'RestfulException{code: $code, message: $message}';
+    return message;
   }
 }

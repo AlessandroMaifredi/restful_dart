@@ -1,41 +1,88 @@
+import 'package:collection/collection.dart';
 import 'package:restful_dart/player/player_role_model.dart';
-import 'package:restful_dart/user/user_model.dart';
 
-class Player extends User {
-  int age;
-  List<PlayerRole> playerRoles;
+/// The player model
+class Player {
+  /// The age of the player
+  final int age;
 
-  Player(
-      {required super.id,
-      required this.age,
-      required this.playerRoles,
-      required super.name,
-      required super.familyName,
-      required super.email,
-      required super.roles});
+  /// The roles of the player
+  final List<PlayerRole> playerRoles;
 
-  factory Player.fromMap(Map<String, dynamic> map) {
+  /// The id of the player in the database
+  final String id;
+
+  /// The name of the player
+  final String name;
+
+  /// The family name of the player
+  final String familyName;
+
+  /// The email of the player
+  final String email;
+
+  /// Standard constructor
+  Player({
+    required this.id,
+    required this.age,
+    required this.playerRoles,
+    required this.name,
+    required this.familyName,
+    required this.email,
+  });
+
+  /// Factory constructor for deserialization from json
+  factory Player.fromJson(Map<String, dynamic> map) {
     return Player(
       id: map['_id'],
       age: map['age'],
-      playerRoles: map['playerRoles'],
       name: map['name'],
       familyName: map['familyName'],
       email: map['email'],
-      roles: map['roles'],
+      playerRoles: map['roles']
+          .map((e) => SerialazablePlayerRole.fromString(e))
+          .toList(),
     );
   }
 
-  @override
-  Map<String, dynamic> toMap() {
+  /// Serialization to json
+  Map<String, dynamic> toJson() {
     return {
       '_id': id,
       'age': age,
-      'playerRoles': playerRoles,
+      'playerRoles': playerRoles.map((e) => e.toJson()).toList(),
       'name': name,
       'familyName': familyName,
       'email': email,
-      'roles': roles,
     };
   }
+
+  /// Serialization to string
+  @override
+  String toString() {
+    return 'Player{age: $age, playerRoles: $playerRoles, id: $id, name: $name, familyName: $familyName, email: $email}';
+  }
+
+  /// Equality operator, uses the [ListEquality] to compare the [playerRoles]
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Player &&
+          runtimeType == other.runtimeType &&
+          age == other.age &&
+          ListEquality().equals(playerRoles, other.playerRoles) &&
+          id == other.id &&
+          name == other.name &&
+          familyName == other.familyName &&
+          email == other.email;
+
+  /// Hashcode operator
+  @override
+  int get hashCode =>
+      age.hashCode ^
+      playerRoles.hashCode ^
+      id.hashCode ^
+      name.hashCode ^
+      familyName.hashCode ^
+      email.hashCode;
 }

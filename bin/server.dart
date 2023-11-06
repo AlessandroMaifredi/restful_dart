@@ -1,29 +1,23 @@
 import 'dart:io';
 
+import 'package:restful_dart/db_driver/db_driver.dart';
+import 'package:restful_dart/player/player_api.dart';
+import 'package:restful_dart/root/root_api.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
-import 'package:shelf_router/shelf_router.dart';
 
-// Configure routes.
-final _router = Router()
-  ..get('/', _rootHandler)
-  ..get('/echo/<message>', _echoHandler);
-
-Response _rootHandler(Request req) {
-  return Response.ok('Hello, World!\n');
-}
-
-Response _echoHandler(Request request) {
-  final message = request.params['message'];
-  return Response.ok('$message\n');
-}
-
+/// The main entry point for the application
 void main(List<String> args) async {
   // Use any available host or container IP (usually `0.0.0.0`).
-  final ip = InternetAddress.anyIPv4;
+  final ip = '127.0.0.1';
 
   // Configure a pipeline that logs requests.
-  final handler = Pipeline().addMiddleware(logRequests()).addHandler(_router);
+  await DbDriver.instance.mongoDb.open();
+  DbDriver.instance.mongoDb.listDatabases().then((value) => print(value));
+  final app = RootApi().router;
+  app.mount(PlayerApi.uriPath, PlayerApi().router);
+  final handler =
+      Pipeline().addMiddleware(logRequests()).addHandler(RootApi().router);
 
   // For running in containers, we respect the PORT environment variable.
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
