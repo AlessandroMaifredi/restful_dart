@@ -1,8 +1,9 @@
-version: 0.0.1
+version: 0.0.2
 
 services:
   mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
       - "27017:27017"
     environment:
@@ -10,7 +11,7 @@ services:
         - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/db_password
         - MONGO_INITDB_DATABASE=restfuldart
     volumes:
-      - monongo-db:/data/db
+      - monongodb-volume:/data/db
     networks:
       - mongo-net
     secrets:
@@ -19,6 +20,7 @@ services:
 
   api:
     build: .
+    container_name: restfuldart-api
     environment:
       - PORT=8080
       - API_QUERIES_LIMIT=100
@@ -31,6 +33,8 @@ services:
       - mongodb
     networks:
       - mongo-net
+    volumes:
+        - restfuldart-volume:/app
 
 networks:
   mongo-net:
@@ -43,4 +47,5 @@ secrets:
     file: ./secrets/db_password.txt
 
 volumes:
-    monongo-db:
+    monongodb-volume:
+    restfuldart-volume:
