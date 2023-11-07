@@ -1,4 +1,4 @@
-version: 0.0.2
+version: '3'
 
 services:
   mongodb:
@@ -13,26 +13,35 @@ services:
     volumes:
       - monongodb-volume:/data/db
     networks:
-      - mongo-net
+      mongo-net:
+        aliases:
+          - database
     secrets:
       - db_user
       - db_password
 
   api:
     build: .
-    container_name: restfuldart-api
+    container_name: api
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     environment:
       - PORT=8080
       - API_QUERIES_LIMIT=100
       - API_QUERIES_PAGE=1
-      - MONGO_DART_DRIVER_HOST=mongodb
+      - MONGO_DART_DRIVER_HOST=database
       - MONGO_DART_DRIVER_PORT=27017
     ports:
       - "8080:8080"
     depends_on:
       - mongodb
     networks:
-      - mongo-net
+      mongo-net:
+        aliases:
+          - api
     volumes:
         - restfuldart-volume:/app
 

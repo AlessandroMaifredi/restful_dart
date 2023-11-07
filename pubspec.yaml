@@ -9,6 +9,7 @@ environment:
 dependencies:
   args: ^2.3.0
   collection: ^1.18.0
+  dart_ping: ^9.0.1
   mongo_dart: ^0.9.3
   shelf: ^1.4.0
   shelf_router: ^1.1.0
