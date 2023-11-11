@@ -1,4 +1,3 @@
-import 'package:mongo_dart/mongo_dart.dart';
 import 'package:restful_dart/db_driver/db_driver.dart';
 import 'package:restful_dart/player/player_model.dart';
 import 'package:restful_dart/restful_exception.dart';
@@ -6,18 +5,11 @@ import 'package:restful_dart/restful_exception.dart';
 /// The repository for the player resource
 class PlayerRepository {
   /// The collection for the player resource in the database
-  final DbCollection _playerCollection =
-      DbDriver.instance.mongoDb.collection('players');
+  final DbDriver dbDriver = DbDriver.instance;
 
   /// Private constructor
   PlayerRepository._() {
-    Future.wait([_init()]);
-  }
-
-  /// Initialize the database ensuring the index by familyName and name for the player resource
-  Future<void> _init() async {
-    await DbDriver.instance.mongoDb.ensureIndex('players',
-        name: 'meta', keys: {'_id': 1, 'familyName': 1, 'name': 1});
+    dbDriver.ensureIntialized();
   }
 
   /// The singleton instance of this repository
@@ -39,12 +31,18 @@ class PlayerRepository {
   Future<List<Player>> getAllPlayers({int? limit, int? page}) {
     limit ??= DbDriver.defaultQueryLimit;
     page ??= DbDriver.defaultQueryPage;
-    return _playerCollection
-        .find(where.sortBy("familyName").limit(limit).skip((page - 1) * limit))
-        .map((event) => Player.fromJson(event))
-        .toList()
-        .catchError(
-            (e) => throw RestfulException(code: 500, message: e.toString()));
+    int offset = (page - 1) * limit;
+    return dbDriver.connection.query(
+        'SELECT * FROM players'
+        ' ORDER BY familyName,id'
+        ' LIMIT ? OFFSET ?',
+        [limit, offset]).then((results) {
+      List<Player> players = [];
+      for (var row in results) {
+        players.add(Player.fromJson(row.fields));
+      }
+      return players;
+    });
   }
 
   /// Get a player by id
@@ -55,14 +53,17 @@ class PlayerRepository {
   ///
   /// Throws a [RestfulException] with code 404 if the player is not found
   /// Throws a [RestfulException] if the operation fails for any other reason
-  Future<Player> getPlayerById(String id) =>
-      _playerCollection.findOne(where.eq('_id', id)).then((value) {
-        if (value == null) {
-          throw RestfulException(code: 404, message: 'Player not found');
-        }
-        return Player.fromJson(value);
-      }).catchError(
-          (e) => throw RestfulException(code: 500, message: e.toString()));
+  Future<Player> getPlayerById(int id) {
+    return dbDriver.connection.query(
+        'SELECT * FROM players'
+        ' WHERE id = ?',
+        [id]).then((results) {
+      if (results.isEmpty) {
+        throw RestfulException(code: 404, message: 'Player not found');
+      }
+      return Player.fromJson(results.first.fields);
+    });
+  }
 
   /// Get all players that have at least the given role
   ///
@@ -76,15 +77,18 @@ class PlayerRepository {
   Future<List<Player>> getPlayersByRole(String role, {int? limit, int? page}) {
     limit ??= DbDriver.defaultQueryLimit;
     page ??= DbDriver.defaultQueryPage;
-    return _playerCollection
-        .find(where
-            .oneFrom('playerRoles', [role])
-            .limit(limit)
-            .skip((page - 1) * limit))
-        .map((event) => Player.fromJson(event))
-        .toList()
-        .catchError(
-            (e) => throw RestfulException(code: 500, message: e.toString()));
+    return dbDriver.connection.query(
+        'SELECT * FROM players'
+        ' WHERE playerRole = ?'
+        ' ORDER BY familyName,id'
+        ' LIMIT ? OFFSET ?',
+        [role, limit, (page - 1) * limit]).then((results) {
+      List<Player> players = [];
+      for (var row in results) {
+        players.add(Player.fromJson(row.fields));
+      }
+      return players;
+    });
   }
 
   /// Create a new player
@@ -96,18 +100,20 @@ class PlayerRepository {
   /// Throws a [RestfulException] with code 400 if the player already exists
   /// Throws a [RestfulException] if the operation fails for any other reason
   Future<Player> createPlayer({required Player player}) {
-    try {
-      getPlayerById(player.id);
-    } on RestfulException catch (e) {
-      if (e.code == 404) {
-        return _playerCollection
-            .insert(player.toJson())
-            .then((value) => Player.fromJson(value))
-            .catchError((e) =>
-                throw RestfulException(code: 500, message: e.toString()));
-      }
-    }
-    throw RestfulException(code: 400, message: 'Player already exists');
+    return dbDriver.connection.query(
+        'INSERT INTO players (name, age, familyName, email, playerRole)'
+        ' VALUES ( ?, ?, ?, ?, ?)',
+        [
+          player.name,
+          player.age,
+          player.familyName,
+          player.email,
+          player.playerRole.name,
+        ]).then((results) {
+      return getPlayerById(results.insertId ?? results.first.fields['id'] ?? 0);
+    }, onError: (e) {
+      throw RestfulException(code: 400, message: e.toString());
+    });
   }
 
   /// Update a player
@@ -129,15 +135,23 @@ class PlayerRepository {
     } catch (_) {
       rethrow;
     }
-    return _playerCollection
-        .replaceOne(where.eq('_id', player.id), player.toJson())
-        .then((value) {
-      if (value.isSuccess) {
-        return Player.fromJson(value.document!.cast<String, dynamic>());
-      }
-      throw RestfulException(code: 500, message: 'Player not updated');
-    }).catchError(
-            (e) => throw RestfulException(code: 500, message: e.toString()));
+    return dbDriver.connection
+        .query(
+            'UPDATE players'
+            ' SET name = ?, age = ?, familyName = ?, email = ?, playerRole = ?'
+            ' WHERE id = ?',
+            [
+              player.name,
+              player.age,
+              player.familyName,
+              player.email,
+              player.playerRole.name,
+              player.id
+            ])
+        .then((_) => player)
+        .catchError((e) {
+          throw RestfulException(code: 500, message: e.toString());
+        });
   }
 
   /// Delete a player
@@ -148,16 +162,20 @@ class PlayerRepository {
   ///
   /// Throws a [RestfulException] with code 404 if the player is not found
   /// Throws a [RestfulException] if the operation fails for any other reason
-  Future<Player> deletePlayer({required String id}) async {
+  Future<Player> deletePlayer({required int id}) async {
     try {
-      await getPlayerById(id);
+      Player pl = await getPlayerById(id);
+      return dbDriver.connection
+          .query(
+              'DELETE FROM players'
+              ' WHERE id = ?',
+              [id])
+          .then((value) => pl)
+          .catchError((e) {
+            throw RestfulException(code: 500, message: e.toString());
+          });
     } catch (_) {
       rethrow;
     }
-
-    return _playerCollection.remove(where.eq('_id', id)).then((value) {
-      return Player.fromJson(value);
-    }).catchError(
-        (e) => throw RestfulException(code: 500, message: e.toString()));
   }
 }

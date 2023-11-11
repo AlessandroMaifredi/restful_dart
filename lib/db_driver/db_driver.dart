@@ -1,22 +1,23 @@
-import 'dart:io' show InternetAddress, Platform;
+import 'dart:io';
 
-import 'package:mongo_dart/mongo_dart.dart';
-
-/// The host for the database connection
-/// Use the environment variable MONGO_DART_DRIVER_HOST to override
-/// Defaults to 127.0.0.1
-final String host = Platform.environment['MONGO_DART_DRIVER_HOST'] ??
-    InternetAddress.loopbackIPv4.toString();
-
-/// The port for the database connection
-/// Use the environment variable MONGO_DART_DRIVER_PORT to override
-/// Defaults to 27017
-final String port = Platform.environment['MONGO_DART_DRIVER_PORT'] ?? '27017';
+import 'package:mysql1/mysql1.dart';
 
 /// A singleton class to manage the database connection
 class DbDriver {
-  /// The database connection
-  final Db _mongoDb = Db('mongodb://$host:$port/restfuldart');
+  /// The database connection settings
+  late ConnectionSettings _connectionSettings;
+
+  MySqlConnection? _connection;
+
+  bool get isConnected => _connection != null;
+
+  MySqlConnection get connection {
+    if (isConnected == false) {
+      throw Exception(
+          "Database connection is not initialized. Did you forget to call DbDriver.instance.ensureIntialized()?");
+    }
+    return _connection!;
+  }
 
   /// The default limit for queries
   /// Use the environment variable API_DEFAULT_QUERIES_LIMIT to override
@@ -35,9 +36,52 @@ class DbDriver {
   /// The singleton instance of this class
   static DbDriver get instance => DbDriver._();
 
-  /// A helper factory constructor
-  Db get mongoDb => _mongoDb;
-
   /// Private constructor
-  DbDriver._();
+  DbDriver._() {
+    String mySqlUser = Platform.environment['MYSQL_USER'] ?? "";
+    String mySqlPassword = Platform.environment['MYSQL_PASSWORD'] ?? "";
+
+    if (Platform.environment['MYSQL_USER_FILE'] != null) {
+      File(Platform.environment['MYSQL_USER_FILE']!)
+          .readAsString()
+          .then((value) => mySqlUser = value);
+    }
+    if (Platform.environment['MYSQL_PASSWORD_FILE'] != null) {
+      File(Platform.environment['MYSQL_PASSWORD_FILE']!)
+          .readAsString()
+          .then((value) => mySqlPassword = value);
+    }
+    _connectionSettings = ConnectionSettings(
+        host: Platform.environment['MYSQL_HOST'] ?? 'localhost',
+        port:
+            int.tryParse(Platform.environment['MYSQL_PORT'].toString()) ?? 3306,
+        user: mySqlUser,
+        password: mySqlPassword,
+        db: 'restfuldart');
+  }
+
+  Future<MySqlConnection> _init() async {
+    _connection = await MySqlConnection.connect(_connectionSettings);
+    return _connection!;
+  }
+
+  /// Ensures the database is initialized
+  Future<bool> ensureIntialized() async {
+    await _init();
+    return true;
+  }
+
+  Future<void> setUpDB() async {
+    await connection.query("CREATE TABLE IF NOT EXISTS players ("
+        "id INT NOT NULL AUTO_INCREMENT,"
+        "name VARCHAR(255) NOT NULL,"
+        "age INT NOT NULL,"
+        "familyName VARCHAR(255) NOT NULL,"
+        "email VARCHAR(255) NOT NULL,"
+        "playerRole VARCHAR(255) NOT NULL,"
+        "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+        "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+        "PRIMARY KEY (id)"
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+  }
 }

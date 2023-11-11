@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:restful_dart/restful_exception.dart';
 
 /// The available roles for a player
 enum PlayerRole {
@@ -8,6 +7,7 @@ enum PlayerRole {
   opposite,
   setter,
   libero,
+  none,
 }
 
 /// A serializable version of the [PlayerRole] enum
@@ -20,12 +20,12 @@ extension SerialazablePlayerRole on PlayerRole {
   }
 
   /// Deserialization from string
-  /// Throws a [RestfulException] if the role is not found
+  /// Returns [PlayerRole.none] if the string is not a valid role
   static PlayerRole fromString(String role) {
     PlayerRole? playerRole =
         PlayerRole.values.firstWhereOrNull((element) => element.name == role);
     if (playerRole == null) {
-      throw RestfulException(message: 'PlayerRole not found', code: 500);
+      return PlayerRole.none;
     }
     return playerRole;
   }

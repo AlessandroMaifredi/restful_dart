@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:restful_dart/player/player_role_model.dart';
 
 /// The player model
@@ -6,11 +5,11 @@ class Player {
   /// The age of the player
   final int age;
 
-  /// The roles of the player
-  final List<PlayerRole> playerRoles;
+  /// The role of the player
+  final PlayerRole playerRole;
 
   /// The id of the player in the database
-  final String id;
+  final int id;
 
   /// The name of the player
   final String name;
@@ -25,7 +24,7 @@ class Player {
   Player({
     required this.id,
     required this.age,
-    required this.playerRoles,
+    required this.playerRole,
     required this.name,
     required this.familyName,
     required this.email,
@@ -34,23 +33,21 @@ class Player {
   /// Factory constructor for deserialization from json
   factory Player.fromJson(Map<String, dynamic> map) {
     return Player(
-      id: map['_id'],
-      age: map['age'],
+      id: (map['id'] ?? 0),
+      age: int.tryParse(map['age'].toString()) ?? 0,
       name: map['name'],
       familyName: map['familyName'],
       email: map['email'],
-      playerRoles: map['roles']
-          .map((e) => SerialazablePlayerRole.fromString(e))
-          .toList(),
+      playerRole: SerialazablePlayerRole.fromString(map['playerRole']),
     );
   }
 
   /// Serialization to json
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'age': age,
-      'playerRoles': playerRoles.map((e) => e.toJson()).toList(),
+      'playerRole': playerRole.name,
       'name': name,
       'familyName': familyName,
       'email': email,
@@ -60,17 +57,17 @@ class Player {
   /// Serialization to string
   @override
   String toString() {
-    return 'Player{age: $age, playerRoles: $playerRoles, id: $id, name: $name, familyName: $familyName, email: $email}';
+    return 'Player{age: $age, playerRole: $playerRole, id: $id, name: $name, familyName: $familyName, email: $email}';
   }
 
-  /// Equality operator, uses the [ListEquality] to compare the [playerRoles]
+  /// Equality operator
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is Player &&
           runtimeType == other.runtimeType &&
           age == other.age &&
-          ListEquality().equals(playerRoles, other.playerRoles) &&
+          playerRole == other.playerRole &&
           id == other.id &&
           name == other.name &&
           familyName == other.familyName &&
@@ -80,7 +77,7 @@ class Player {
   @override
   int get hashCode =>
       age.hashCode ^
-      playerRoles.hashCode ^
+      playerRole.hashCode ^
       id.hashCode ^
       name.hashCode ^
       familyName.hashCode ^

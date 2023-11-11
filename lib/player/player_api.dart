@@ -28,7 +28,7 @@ import '../restful_exception.dart';
 class PlayerApi {
   /// The versioned path to this api
   /// /v1/players
-  static String uriPath = '/v1/players';
+  static String uriPath = '/api/v1/players';
 
   /// The repository for this api
   final PlayerRepository _playerRepository = PlayerRepository();
@@ -97,7 +97,11 @@ class PlayerApi {
     /// Returns the player with id 1
     router.get('/<id>', (Request request, String id) async {
       try {
-        final res = jsonEncode(await _playerRepository.getPlayerById(id));
+        int? maybeId = int.tryParse(id);
+        if (maybeId == null) {
+          return Response.badRequest(body: "id is not a valid integer");
+        }
+        final res = jsonEncode(await _playerRepository.getPlayerById(maybeId));
         return Response.ok(res, headers: {'Content-Type': 'application/json'});
       } on RestfulException catch (e) {
         if (e.code == 404) {
@@ -128,8 +132,8 @@ class PlayerApi {
     ///
     /// GET /v1/players/roles/setter?limit=10&page=1
     router.get('/roles/<role>', (Request request, String role) async {
-      if (PlayerRole.values.map((e) => e.name).contains(role)) {
-        Response.badRequest(
+      if (!PlayerRole.values.map((e) => e.name).contains(role)) {
+        return Response.badRequest(
             body:
                 'Role does not exists, please use one of: ${PlayerRole.values.map((e) => e.name)}');
       }
@@ -155,7 +159,7 @@ class PlayerApi {
     ///  "id": "1",
     ///  "name": "John",
     ///  "familyName": "Doe",
-    ///  "playerRoles": ["middleBlocker", "setter"],
+    ///  "playerRole": "middleBlocker",
     ///  "age": 25,
     ///  "email": "john.doe@domain.com"
     ///  }
@@ -175,8 +179,8 @@ class PlayerApi {
           return Response.badRequest(body: e.message);
         }
         return Response(e.code, body: e.message);
-      } catch (e) {
-        return Response.internalServerError(body: e.toString());
+      } catch (e, s) {
+        return Response.internalServerError(body: "$e\n---\n$s");
       }
     });
 
@@ -193,7 +197,7 @@ class PlayerApi {
     /// "id": "1",
     /// "name": "John",
     /// "familyName": "Doe",
-    /// "playerRoles": ["middleBlocker", "setter"],
+    /// "playerRole": "middleBlocker",
     /// "age": 25,
     ///  "email": "john.doe@domain.com"
     /// }
@@ -209,7 +213,11 @@ class PlayerApi {
       try {
         final body = await request.readAsString();
         final Player player = Player.fromJson(jsonDecode(body));
-        if (player.id != id) {
+        int? maybeId = int.tryParse(id);
+        if (maybeId == null) {
+          return Response.badRequest(body: "id is not a valid integer");
+        }
+        if (player.id != maybeId) {
           return Response.badRequest(
               body: 'Id in body and path must be the same');
         }
@@ -241,7 +249,12 @@ class PlayerApi {
         if (id.isEmpty) {
           return Response.badRequest(body: 'Id must not be empty');
         }
-        final res = jsonEncode(await _playerRepository.deletePlayer(id: id));
+        int? maybeId = int.tryParse(id);
+        if (maybeId == null) {
+          return Response.badRequest(body: "id is not a valid integer");
+        }
+        final res =
+            jsonEncode(await _playerRepository.deletePlayer(id: maybeId));
         return Response.ok(res, headers: {'Content-Type': 'application/json'});
       } on RestfulException catch (e) {
         if (e.code == 404) {
