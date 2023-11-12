@@ -41,6 +41,7 @@ The build is divided in two stages, the first one uses the official Dart image t
  the second one uses the official Alpine image to build the minimal serving image.
 Originally the second stage used the scratch image, but for debugging purposes I changed it to the Alpine image.
 The api exposes the port 8080 to the host machine.
+Please be aware that the server depends on the MySql server to be up and running before starting, so if the MySql server is not up and running the server will crash.
 ```dockerfile
 # Use latest stable channel SDK.
 FROM dart:stable AS build
