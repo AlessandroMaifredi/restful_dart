@@ -75,6 +75,7 @@ The API uses two environment variables to set the default values to use for pagi
 The project has the capability to use two files that contains the credentials for the root user of MySql, passing them to some environment variables through the secret feature of docker-compose. 
 The files need to be created in the secrets folder inside the root directory of the project. If you don't want to change the docker-compose file, create the two files using the following names: "db_user.txt" and "db_password.txt".
 The api service uses explicit environment variables to set the credentials for the user that the server uses to connect to the database.
+If you want you can explicitly set the credentials for the root user of MySql using the environment variables MYSQL_ROOT_PASSWORD, MYSQL_USER and MYSQL_PASSWORD.
 
 To wait for the MySql server to be up and running the api service uses the depends_on feature of docker-compose, and the condition service_healthy.
 The healthcheck of the MySql server is set to wait for the server to be up and running before returning a healthy status, and uses the mysqladmin command to ping the server.
