@@ -50,7 +50,7 @@ services:
       database:
         condition: service_healthy
         required: true
-        restart: always
+        restart: true
     networks:
       backend-net:
         aliases:
